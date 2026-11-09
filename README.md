@@ -98,7 +98,7 @@ Provides a browser-based interface for uploading files and viewing their analysi
 ### 1. Clone the repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Jbishop-cyber/MAP.git
 cd MAP
 ```
 
