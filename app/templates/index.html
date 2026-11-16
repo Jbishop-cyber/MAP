@@ -1,0 +1,69 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>Sentrix | System Security</title>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+    <body>
+    <div class="container">
+
+        <header>
+            <h1>Sentrix</h1>
+            <p>Intelligent File Security &amp; Threat Analysis</p>
+            <span class="badge clear">SYSTEM ONLINE</span>
+        </header>
+
+        <section class="panel upload-panel">
+            <h2>Analyse a File</h2>
+            <p>Upload a file for security analysis using YARA-X and ClamAV.</p>
+
+            <form id="scanForm">
+                <label for="fileInput" class="upload-area">
+                    <span class="upload-icon">↑</span>
+                    <strong>Choose a file to analyse</strong>
+                    <span>Click here to browse your computer</span>
+                    <small>Maximum file size: 20 MB</small>
+                </label>
+
+                <input type="file" id="fileInput" required>
+
+                <p id="selectedFile">No file selected</p>
+                <button type="button" id="removeFileButton" hidden>
+                    Remove File
+                </button>
+
+                <button type="submit" id="scanButton">Start Analysis</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <h2>Analysis Results</h2>
+
+            <span id="statusBadge" class="badge">
+                WAITING FOR SCAN
+            </span>
+
+            <div id="scanIndicator" class="scan-indicator" hidden>
+                <div class="scan-circle">
+                    <div class="spinner"></div>
+                </div>
+
+                <h3 id="scanStatusText">ANALYSING FILE...</h3>
+            </div>
+
+            <div id="results"></div>
+
+            <p class="disclaimer">
+                Note: No detection does not guarantee that a file is safe.
+            </p>
+        </section>
+
+    </div>
+
+    <script src="/static/js/app.js" defer></script>
+</body>
+    </html>
+    
