@@ -1,10 +1,10 @@
-# Malware Analysis Platform (MAP)
+# Sentrix — Intelligent File Security Platform
 
-A local-first hybrid Malware Analysis Platform built with Python. It combines static file analysis, signature-based malware detection, and a web interface to help users inspect suspicious files and identify potential threats.
+Sentrix is a local-first, hybrid file security platform built with Python. It combines static file analysis, signature-based malware detection, and a web-based security dashboard to help users inspect suspicious files and identify potential threats.
 
 ## Project Overview
 
-The Malware Analysis Platform (MAP) is designed to provide a simple environment for analysing files using multiple security tools.
+Sentrix aims to evolve into a cross-platform security solution that protects users against malicious files, suspicious downloads, unsafe links, and potentially harmful applications.
 
 The current prototype integrates:
 
@@ -16,7 +16,7 @@ The current prototype integrates:
 - FastAPI backend
 - Browser-based file upload and analysis interface
 
-The platform is designed to analyse files without executing them.
+Files are analysed without being executed.
 
 ## Technology Stack
 
@@ -36,7 +36,7 @@ The platform is designed to analyse files without executing them.
 ```text
 MAP/
 │
-├── analyzer/
+├── core/
 │   ├── __init__.py
 │   ├── file_identifier.py
 │   ├── hash_analyzer.py
@@ -57,6 +57,9 @@ MAP/
 │   ├── yara_test.txt
 │   └── clean_test.txt
 │
+├── test_clamav.py
+├── test_report.py
+├── test_yara.py
 ├── requirements.txt
 ├── README.md
 └── .gitignore

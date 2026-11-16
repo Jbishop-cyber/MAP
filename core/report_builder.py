@@ -1,7 +1,7 @@
-from analyzer.file_identifier import identify_file
-from analyzer.hash_analyzer import calculate_sha256
-from analyzer.yara_analyzer import scan_with_yara
-from analyzer.clamav_analyzer import scan_with_clamav
+from core.file_identifier import identify_file
+from core.hash_analyzer import calculate_sha256
+from core.yara_analyzer import scan_with_yara
+from core.clamav_analyzer import scan_with_clamav
 
 def analyze_file(file_path, rule_path, original_filename=None):
     file_info = identify_file(file_path)

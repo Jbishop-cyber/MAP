@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi import UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse
 
-from analyzer.report_builder import analyze_file
+from core.report_builder import analyze_file
 
 
 app = FastAPI(
