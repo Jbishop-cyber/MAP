@@ -1,13 +1,22 @@
 import os
 import hashlib
 
+
 def calculate_sha256(file_path):
     if not os.path.isfile(file_path):
-        return("error: file path does not exists")
-    
-    with open(file_path, "rb") as file:
-        content = file.read()
+        return {"error": "File does not exist"}
 
-    result = hashlib.sha256(content).hexdigest()
+    sha256_hash = hashlib.sha256()
 
-    return result
+    try:
+        with open(file_path, "rb") as file:
+            while chunk := file.read(65536):
+                sha256_hash.update(chunk)
+
+    except PermissionError:
+        return {"error": "Permission denied: Cannot access file"}
+
+    except OSError as error:
+        return {"error": f"Hash calculation failed: {error}"}
+
+    return sha256_hash.hexdigest()

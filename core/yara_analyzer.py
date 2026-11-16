@@ -10,18 +10,28 @@ def scan_with_yara(file_path, rule_path):
     if not os.path.isfile(rule_path):
         return {"error": "YARA rule file does not exist"}
 
-    # Read the YARA rule
-    with open(rule_path, "r") as file:
-        rule_source = file.read()
+    try:
+        with open(rule_path, "r") as file:
+            rule_source = file.read()
 
-    # Compile the rule
-    rules = yara_x.compile(rule_source)
+        rules = yara_x.compile(rule_source)
 
-    # Create scanner
-    scanner = yara_x.Scanner(rules)
+    except Exception as error:
+        return {
+            "error": f"YARA rule error: {error}"
+        }
 
-    # Scan the file
-    results = scanner.scan_file(file_path)
+    try:
+        # Create scanner
+        scanner = yara_x.Scanner(rules)
+
+        # Scan the file
+        results = scanner.scan_file(file_path)
+
+    except Exception as error:
+        return {
+            "error": f"YARA scanning failed: {error}"
+        }
 
     # Extract matching rule names
     detections = [

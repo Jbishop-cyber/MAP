@@ -1,7 +1,11 @@
+from pathlib import Path
+
 from core.file_identifier import identify_file
 from core.hash_analyzer import calculate_sha256
 from core.yara_analyzer import scan_with_yara
 from core.clamav_analyzer import scan_with_clamav
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 def analyze_file(file_path, rule_path, original_filename=None):
     file_info = identify_file(file_path)
@@ -10,8 +14,15 @@ def analyze_file(file_path, rule_path, original_filename=None):
         return file_info
     
     file_hash = calculate_sha256(file_path)
+    if isinstance(file_hash, dict) and "error" in file_hash:
+        return {"error": file_hash["error"]}
 
-    yara_result = scan_with_yara(file_path, rule_path)
+    rule_path = Path(rule_path)
+
+    if not rule_path.is_absolute():
+        rule_path = PROJECT_ROOT / rule_path
+
+    yara_result = scan_with_yara(file_path, str(rule_path))
 
     clamav_result = scan_with_clamav(file_path)
 

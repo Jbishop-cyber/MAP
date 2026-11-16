@@ -5,9 +5,14 @@ def format_report(report):
     clamav_result = report["clamav_analysis"]
 
     # Determine YARA status
-    if yara_result.get("matches_found", 0) > 0:
+    if "error" in yara_result:
+        yara_status = "SCAN ERROR"
+        yara_detections = yara_result["error"]
+
+    elif yara_result.get("matches_found", 0) > 0:
         yara_status = "MATCHES FOUND"
         yara_detections = ", ".join(yara_result["detections"])
+
     else:
         yara_status = "NO MATCHING RULES"
         yara_detections = "None"
@@ -22,18 +27,20 @@ def format_report(report):
     else:
         clamav_display = "SCAN ERROR"
 
+    clamav_error = clamav_result.get("error", "None")
+
     # Determine overall assessment
-    if clamav_status == "infected":
+    if "error" in yara_result or clamav_status == "error":
+        overall_status = "SCAN ERROR"
+        reason = "One or more security scans could not be completed."
+
+    elif clamav_status == "infected":
         overall_status = "DETECTED"
         reason = "ClamAV identified a known threat signature."
 
     elif yara_result.get("matches_found", 0) > 0:
         overall_status = "FLAGGED FOR REVIEW"
         reason = "YARA-X identified matching rules requiring investigation."
-
-    elif clamav_status == "error" or "error" in yara_result:
-        overall_status = "SCAN ERROR"
-        reason = "One or more security scans could not be completed."
 
     else:
         overall_status = "NO DETECTION"
@@ -68,6 +75,7 @@ CLAMAV ANALYSIS
 --------------------------------------------------
 Status:         {clamav_display}
 Return Code:    {clamav_result.get('return_code', 'N/A')}
+Error Details:  {clamav_error}
 
 OVERALL ASSESSMENT
 --------------------------------------------------

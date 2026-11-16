@@ -760,6 +760,12 @@ async def scan_file(file: UploadFile = File(...)):
             original_filename=filename
         )
 
+        if "error" in report:
+            raise HTTPException(
+                status_code=500,
+                detail=report["error"]
+            )
+
         return {
             "uploaded_filename": filename,
             "analysis": report

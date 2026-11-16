@@ -10,7 +10,14 @@ def identify_file(file_path):
     
     filename = os.path.basename(file_path)
     extension = os.path.splitext(filename)[1]
-    file_size = os.path.getsize(file_path)
+    try:
+        file_size = os.path.getsize(file_path)
+
+    except PermissionError:
+        return {"error": "Permission denied: Cannot access file"}
+
+    except OSError as error:
+        return {"error": f"File identification failed: {error}"}
 
     mime_type, encoding = mimetypes.guess_type(file_path)
 
