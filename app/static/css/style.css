@@ -373,3 +373,42 @@
             opacity: 1;
         }
     }
+
+    /* Scan History Table */
+
+    #historyContainer {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    #historyContainer table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-top: 20px;
+        font-size: 14px;
+        border: 2px solid #64748b;
+    }
+
+    #historyContainer th,
+    #historyContainer td {
+        padding: 14px 16px;
+        text-align: left;
+        border-right: 1px solid #64748b;
+        border-left: 1px solid #64748b;
+    }
+
+    #historyContainer th:last-child,
+    #historyContainer td:last-child {
+        border-right: none;
+    }
+
+    #historyContainer tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    #historyContainer th {
+        background: #e2e8f0;
+        color: #1e3a8a;
+        font-weight: bold;
+    }

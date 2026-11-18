@@ -1,6 +1,6 @@
 from pathlib import Path
 from core.report_builder import analyze_file
-from core.report_formatter import format_report
+from core.report_formatter import format_report, get_overall_status
 
 
 def test_report_generation():
@@ -152,4 +152,22 @@ def test_hash_error_stops_report_generation(monkeypatch):
 
     assert "error" in report
     assert report["error"] == "Permission denied: Cannot access file"
+
+def test_extension_mismatch_flagged_for_review():
+    report = {
+        "file information": {
+            "extension_mismatch": True
+        },
+        "yara_analysis": {
+            "matches_found": 0
+        },
+        "clamav_analysis": {
+            "scan_status": "no_detection"
+        }
+    }
+
+    status, reason = get_overall_status(report)
+
+    assert status == "FLAGGED FOR REVIEW"
+    assert "extension" in reason.lower()
 

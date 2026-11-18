@@ -1,8 +1,50 @@
+def get_overall_status(report):
+    yara_result = report["yara_analysis"]
+
+    clamav_result = report["clamav_analysis"]
+    clamav_status = clamav_result.get("scan_status", "error")
+
+    file_info = report["file information"]
+    extension_mismatch = file_info.get("extension_mismatch", False)
+
+    if "error" in yara_result or clamav_status == "error":
+        return (
+            "SCAN ERROR",
+            "One or more security scans could not be completed."
+        )
+    elif clamav_status == "infected":
+        return (
+            "DETECTED",
+            "ClamAV identified a known threat signature."
+        )
+    elif yara_result.get("matches_found", 0) > 0:
+        return (
+            "FLAGGED FOR REVIEW",
+            "YARA-X identified matching rules requiring investigation."
+        )
+    elif extension_mismatch:
+        return (
+            "FLAGGED FOR REVIEW",
+            "File extension does not match detected file content."
+        )
+    else:
+        return (
+            "NO DETECTION",
+            "No threats were detected by the cofigured scanners."
+        )
+
 def format_report(report):
     file_info = report["file information"]
     file_hash = report["sha256"]
     yara_result = report["yara_analysis"]
     clamav_result = report["clamav_analysis"]
+    detected_type = file_info.get("detected_type", "Unknown")
+    extension_mismatch = file_info.get("extension_mismatch", False)
+
+    if extension_mismatch:
+        extension_warning = "WARNING: File extension does not match detected content!"
+    else:
+        extension_warning = "No extension mismatch detected."
 
     # Determine YARA status
     if "error" in yara_result:
@@ -29,22 +71,7 @@ def format_report(report):
 
     clamav_error = clamav_result.get("error", "None")
 
-    # Determine overall assessment
-    if "error" in yara_result or clamav_status == "error":
-        overall_status = "SCAN ERROR"
-        reason = "One or more security scans could not be completed."
-
-    elif clamav_status == "infected":
-        overall_status = "DETECTED"
-        reason = "ClamAV identified a known threat signature."
-
-    elif yara_result.get("matches_found", 0) > 0:
-        overall_status = "FLAGGED FOR REVIEW"
-        reason = "YARA-X identified matching rules requiring investigation."
-
-    else:
-        overall_status = "NO DETECTION"
-        reason = "No threats were detected by the configured scanners."
+    overall_status, reason = get_overall_status(report)
 
     # Build report
     output = f"""
@@ -59,6 +86,8 @@ Filename:       {file_info['filename']}
 Extension:      {file_info['extension']}
 File Size:      {file_info['file_size']} bytes
 MIME Type:      {file_info['mime_type']}
+Detected Type: {detected_type}
+Extension Check: {extension_warning}
 
 FILE FINGERPRINT
 --------------------------------------------------

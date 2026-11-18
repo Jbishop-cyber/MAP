@@ -31,3 +31,6 @@ htmlcov/
 
 # Generated databases
 *.db
+
+# Backup files
+*.bak
