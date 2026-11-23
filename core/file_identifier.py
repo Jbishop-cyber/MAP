@@ -1,6 +1,6 @@
 import os
 import mimetypes
-import json
+import ijson
 
 FILE_SIGNATURES = {
     "PNG": bytes.fromhex("89504E470D0A1A0A"),
@@ -29,20 +29,20 @@ def detect_file_signature(file_path):
             file_header = file.read(8)
     except OSError as error:
         return {"error": str(error)}
-    
+
     for file_type, signature in FILE_SIGNATURES.items():
         if file_header.startswith(signature):
             return file_type
-    
+
     return "Unknown"
 
 def identify_file(file_path):
     if not os.path.exists(file_path):
         return {"error": "File does not exist"}
-    
+
     if not os.path.isfile(file_path):
         return {"error": "Path is not a file"}
-    
+
     filename = os.path.basename(file_path)
     extension = os.path.splitext(filename)[1]
     try:
@@ -63,7 +63,7 @@ def identify_file(file_path):
 
     if detected_type == "Unknown":
         detected_type = detect_text_file_type(file_path)
-    
+
     extension_mismatch = check_extension_mismatch(
         extension,
         detected_type
@@ -78,16 +78,29 @@ def identify_file(file_path):
         "extension_mismatch": extension_mismatch
     }
 
+def validate_json_file(file_path):
+    try:
+        with open(file_path, "rb") as file:
+            has_content = False
+
+            for _ in ijson.parse(file):
+                has_content = True
+
+        return has_content
+
+    except (ijson.JSONError, OSError):
+        return False
+
 def detect_text_file_type(file_path):
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             content = file.read(4096).lstrip()
     except (OSError, UnicodeDecodeError):
         return "Unknown"
-    
+
     if not content:
         return "Unknown"
-    
+
     lowered_content = content.lower()
 
     # HTML detection
@@ -98,17 +111,14 @@ def detect_text_file_type(file_path):
         "<body"
     ]):
         return "HTML"
-    
+
     # XML detection
     if lowered_content.startswith("<?xml"):
         return "XML"
-    
+
     # JSON detection
-    try:
-        json.loads(content)
+    if validate_json_file(file_path):
         return "JSON"
-    except json.JSONDecodeError:
-        pass
 
     return "Unknown"
 

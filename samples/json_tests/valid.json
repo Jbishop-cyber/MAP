@@ -1,0 +1,9 @@
+{
+    "name": "Sentrix",
+    "version": "0.2",
+    "features": [
+        "File Identification",
+        "Malware Detection",
+        "SHA-256 Hashing"
+    ]
+}

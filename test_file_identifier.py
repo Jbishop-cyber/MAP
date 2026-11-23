@@ -1,11 +1,13 @@
 import pytest
 import os
+import json
 
 from core.file_identifier import (
     identify_file,
     detect_file_signature,
     detect_text_file_type,
-    check_extension_mismatch
+    check_extension_mismatch,
+    validate_json_file
 )
 
 def test_identify_file_permission_error(monkeypatch):
@@ -129,3 +131,40 @@ def test_extension_mismatch():
 def test_unknown_extension():
     result = check_extension_mismatch(".xyz", "HTML")
     assert result is False
+
+def test_validate_json_file_valid(tmp_path):
+    test_file = tmp_path / "valid.json"
+    test_file.write_text('{"name": "Sentrix", "version": "0.2"}')
+
+    result = validate_json_file(test_file)
+
+    assert result is True
+
+def test_validate_json_file_invalid(tmp_path):
+    test_file = tmp_path / "invalid.json"
+    test_file.write_text('{"name": "Sentrix"')
+
+    result = validate_json_file(test_file)
+
+    assert result is False
+
+def test_validate_json_file_empty(tmp_path):
+    test_file = tmp_path / "empty.json"
+    test_file.write_text("")
+
+    result = validate_json_file(test_file)
+
+    assert result is False
+
+def test_validate_large_json_file(tmp_path):
+    test_file = tmp_path / "large.json"
+
+    large_data = {
+        "name": "Sentrix",
+        "records": ["security analysis"] * 1000
+    }
+
+    test_file.write_text(json.dumps(large_data))
+
+    assert test_file.stat().st_size > 4096
+    assert validate_json_file(test_file) is True

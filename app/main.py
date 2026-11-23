@@ -1,20 +1,26 @@
 import os
+import stat
 import tempfile
 
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+from typing import Optional
 
-from fastapi import FastAPI
-from fastapi import UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 from core.report_builder import analyze_file
-
 from core.database import save_scan, get_scan_history
 from core.report_formatter import get_overall_status
-
-from fastapi import Request
-from fastapi.templating import Jinja2Templates
+from core.quarantine import (
+    quarantine_file,
+    restore_quarantined_file,
+    delete_quarantined_file,
+    list_quarantined_files,
+    get_quarantined_file
+)
 
 
 app = FastAPI(
@@ -749,10 +755,30 @@ def scan_history():
         "history": history
     }
 
+def sanitize_filename(raw_filename: str) -> str:
+    """
+    Strip directory components from both Unix and Windows-style paths
+    and remove null bytes.
+    """
+    cleaned = raw_filename.replace("\x00", "")
+
+    # PureWindowsPath handles both \ and / as separators
+    cleaned = PureWindowsPath(cleaned).name
+
+    # Defence in depth: also apply POSIX Path
+    cleaned = Path(cleaned).name
+
+    if not cleaned:
+        cleaned = "uploaded_file"
+
+    return cleaned
+
+
 @app.post("/scan")
 async def scan_file(file: UploadFile = File(...)):
 
     filename = file.filename or "uploaded_file"
+    filename = sanitize_filename(filename)
     suffix = Path(filename).suffix
 
     temp_path = None
@@ -766,6 +792,9 @@ async def scan_file(file: UploadFile = File(...)):
         ) as temp_file:
 
             temp_path = temp_file.name
+
+            # Restrict to owner read/write only
+            os.chmod(temp_path, stat.S_IRUSR | stat.S_IWUSR)
 
             while True:
                 chunk = await file.read(1024 * 1024)
@@ -819,3 +848,85 @@ async def scan_file(file: UploadFile = File(...)):
             os.remove(temp_path)
 
         await file.close()
+
+
+class QuarantineRequest(BaseModel):
+    file_path: str
+    threat_name: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class RestoreRequest(BaseModel):
+    destination_path: Optional[str] = None
+
+
+@app.get("/quarantine")
+def get_quarantined_items(include_inactive: bool = Query(False)):
+    records = list_quarantined_files(include_inactive=include_inactive)
+    return {
+        "total": len(records),
+        "quarantined_files": records
+    }
+
+
+@app.get("/quarantine/{quarantine_id}")
+def get_quarantined_item(quarantine_id: str):
+    record = get_quarantined_file(quarantine_id)
+    if not record:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Quarantine item with id '{quarantine_id}' not found."
+        )
+    return record
+
+
+@app.post("/quarantine/isolate")
+def isolate_file(payload: QuarantineRequest):
+    result = quarantine_file(
+        file_path=payload.file_path,
+        threat_name=payload.threat_name,
+        reason=payload.reason
+    )
+
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    return result
+
+
+@app.post("/quarantine/{quarantine_id}/restore")
+def restore_file(
+    quarantine_id: str,
+    payload: Optional[RestoreRequest] = None
+):
+    destination_path = payload.destination_path if payload else None
+
+    result = restore_quarantined_file(
+        quarantine_id=quarantine_id,
+        destination_path=destination_path
+    )
+
+    if "error" in result:
+        err_msg = result["error"]
+
+        if "not found" in err_msg.lower():
+            raise HTTPException(status_code=404, detail=err_msg)
+        elif "integrity check failed" in err_msg.lower():
+            raise HTTPException(status_code=409, detail=err_msg)
+        else:
+            raise HTTPException(status_code=400, detail=err_msg)
+
+    return result
+
+@app.delete("/quarantine/{quarantine_id}")
+def delete_file(quarantine_id: str):
+    result = delete_quarantined_file(quarantine_id)
+
+    if "error" in result:
+        err_msg = result["error"]
+        if "not found" in err_msg.lower():
+            raise HTTPException(status_code=404, detail=err_msg)
+        else:
+            raise HTTPException(status_code=400, detail=err_msg)
+
+    return result

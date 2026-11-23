@@ -87,3 +87,108 @@ def test_missing_upload():
 
     assert response.status_code == 422
 
+def test_filename_sanitization():
+    response = client.post(
+        "/scan",
+        files={
+            "file": (
+                "../../malicious.pdf",
+                b"sample content",
+                "application/pdf"
+            )
+        }
+    )
+
+    assert response.status_code == 200
+    assert response.json()["uploaded_filename"] == "malicious.pdf"
+
+
+def test_windows_absolute_path_sanitization():
+    response = client.post(
+        "/scan",
+        files={
+            "file": (
+                "C:\\Users\\evil\\payload.exe",
+                b"sample content",
+                "application/octet-stream"
+            )
+        }
+    )
+
+    assert response.status_code == 200
+    assert response.json()["uploaded_filename"] == "payload.exe"
+
+
+def test_windows_relative_path_sanitization():
+    response = client.post(
+        "/scan",
+        files={
+            "file": (
+                "..\\..\\malware.txt",
+                b"sample content",
+                "text/plain"
+            )
+        }
+    )
+
+    assert response.status_code == 200
+    assert response.json()["uploaded_filename"] == "malware.txt"
+
+
+def test_null_byte_sanitization():
+    response = client.post(
+        "/scan",
+        files={
+            "file": (
+                "innocent.txt\x00.exe",
+                b"sample content",
+                "text/plain"
+            )
+        }
+    )
+
+    assert response.status_code == 200
+    assert "\x00" not in response.json()["uploaded_filename"]
+
+
+def test_temp_file_permissions(monkeypatch):
+    captured = {}
+
+    def mock_analyze(file_path, rule_path, original_filename=None):
+        file_stat = os.stat(file_path)
+        captured["mode"] = file_stat.st_mode
+        captured["path"] = file_path
+        return {"error": "Simulated failure"}
+
+    monkeypatch.setattr("app.main.analyze_file", mock_analyze)
+
+    response = client.post(
+        "/scan",
+        files={"file": ("test.txt", b"sample content", "text/plain")}
+    )
+
+    assert response.status_code == 500
+    assert captured["mode"] & 0o777 == 0o600
+    assert not os.path.exists(captured["path"])
+
+
+def test_oversized_file_cleanup(monkeypatch):
+    removed = []
+    original_remove = os.remove
+
+    def track_remove(path):
+        removed.append(path)
+        original_remove(path)
+
+    monkeypatch.setattr(os, "remove", track_remove)
+
+    large_content = b"A" * (20 * 1024 * 1024 + 1)
+
+    response = client.post(
+        "/scan",
+        files={"file": ("large.txt", large_content, "text/plain")}
+    )
+
+    assert response.status_code == 413
+    assert len(removed) >= 1
+    assert not os.path.exists(removed[0])
